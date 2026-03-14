@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a1208">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="行政書士単語帳">
+<meta name="description" content="行政書士試験対策 単語帳アプリ">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>行政書士 単語帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500&family=Shippori+Mincho:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1208;--paper:#f5f0e8;--paper-dark:#ede6d6;
+  --red:#c0392b;--red-light:#f5ddd9;
+  --gold:#b8860b;--gold-light:#f0e4b0;
+  --green:#2e7d55;--green-light:#d4edd8;
+  --blue:#1a5276;--blue-light:#d4e6f1;
+  --muted:#7a6a50;--border:#c8b898;
+  --shadow:0 2px 12px rgba(0,0,0,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{scroll-behavior:smooth;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;min-height:100dvh;background-image:repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(180,160,120,0.12) 31px,rgba(180,160,120,0.12) 32px);}
+
+/* ── AUTH SCREEN ── */
+#authScreen{position:fixed;inset:0;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;gap:32px;padding:40px;}
+#authScreen.hidden{display:none;}
+.auth-logo{font-family:'Shippori Mincho',serif;color:var(--paper);text-align:center;}
+.auth-logo .big{font-size:clamp(28px,7vw,48px);display:block;margin-bottom:8px;}
+.auth-logo .sub{font-size:14px;color:rgba(245,240,232,0.5);letter-spacing:.15em;}
+.btn-google{display:flex;align-items:center;gap:12px;background:white;color:#3c4043;border:none;border-radius:8px;padding:14px 28px;font-size:15px;font-family:'Noto Sans JP',sans-serif;font-weight:500;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);transition:all .2s;}
+.btn-google:hover{box-shadow:0 4px 16px rgba(0,0,0,0.4);transform:translateY(-1px);}
+.btn-google svg{width:20px;height:20px;flex-shrink:0;}
+.auth-note{font-size:12px;color:rgba(245,240,232,0.35);text-align:center;line-height:1.8;}
+
+/* ── LOADING ── */
+#loadingScreen{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:400;flex-direction:column;gap:16px;}
+#loadingScreen.hidden{display:none;}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:13px;color:var(--muted);}
+
+/* ── HEADER ── */
+.header{background:var(--ink);color:var(--paper);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.25);}
+.header-title{font-family:'Shippori Mincho',serif;font-size:clamp(14px,3.5vw,19px);letter-spacing:.08em;display:flex;align-items:center;gap:8px;}
+.header-title::before{content:'行';display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--red);border-radius:4px;font-size:15px;flex-shrink:0;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.header-stats{font-size:11px;color:rgba(245,240,232,0.55);text-align:right;line-height:1.7;}
+.btn-signout{background:none;border:1px solid rgba(245,240,232,0.2);border-radius:4px;color:rgba(245,240,232,0.5);font-size:11px;padding:3px 8px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .2s;}
+.btn-signout:hover{border-color:rgba(245,240,232,0.5);color:var(--paper);}
+
+/* ── NAV ── */
+.nav{display:flex;background:var(--paper-dark);border-bottom:2px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.nav::-webkit-scrollbar{display:none;}
+.nav-btn{flex:1;min-width:56px;padding:10px 4px 8px;border:none;background:transparent;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-size:10px;color:var(--muted);transition:all .2s;border-bottom:3px solid transparent;margin-bottom:-2px;display:flex;align-items:center;justify-content:center;gap:3px;flex-direction:column;white-space:nowrap;}
+.nav-icon{font-size:17px;line-height:1;}
+.nav-btn.active{color:var(--red);border-bottom-color:var(--red);font-weight:500;background:var(--paper);}
+
+/* ── PAGES ── */
+.page{display:none;padding:16px;max-width:800px;margin:0 auto;padding-bottom:32px;}
+.page.active{display:block;}
+
+/* ── SECTION HEADER ── */
+.section-header{font-family:'Shippori Mincho',serif;font-size:13px;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.card-count{background:var(--ink);color:var(--paper);font-size:10px;padding:2px 7px;border-radius:10px;font-family:'Noto Sans JP',sans-serif;}
+
+/* ── FILTER ── */
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.chip{padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:white;font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;font-family:'Noto Sans JP',sans-serif;}
+.chip.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+/* ── FLASHCARDS ── */
+.card-grid{display:flex;flex-direction:column;gap:8px;}
+.flashcard{background:white;border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:6px;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,0.05);overflow:hidden;}
+.flashcard:hover{box-shadow:0 3px 12px rgba(0,0,0,0.1);transform:translateY(-1px);}
+.flashcard.bookmarked{border-left-color:var(--red);}
+.card-front{padding:11px 13px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.card-term-wrap{flex:1;min-width:0;}
+.category-badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--paper-dark);color:var(--muted);border:1px solid var(--border);margin-bottom:3px;}
+.record-badge{font-size:9px;padding:1px 5px;border-radius:3px;margin-left:3px;}
+.record-badge.g{background:var(--green-light);color:var(--green);}
+.record-badge.w{background:var(--red-light);color:var(--red);}
+.card-term{font-family:'Shippori Mincho',serif;font-size:clamp(14px,3.8vw,18px);font-weight:700;color:var(--ink);}
+.card-reading{font-size:11px;color:var(--muted);margin-left:5px;}
+.card-actions{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.btn-icon{background:none;border:none;cursor:pointer;font-size:17px;padding:3px;transition:transform .15s;line-height:1;}
+.btn-icon:hover{transform:scale(1.2);}
+.btn-small{background:var(--paper-dark);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:10px;font-family:'Noto Sans JP',sans-serif;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn-small:hover{background:var(--ink);color:var(--paper);}
+.card-back{max-height:0;overflow:hidden;transition:max-height .3s ease;background:var(--gold-light);border-top:1px solid transparent;}
+.card-back.open{max-height:400px;border-top-color:var(--border);}
+.card-meaning{padding:11px 13px;font-size:13px;line-height:1.9;color:#3a2e1a;}
+
+/* ── EMPTY ── */
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted);}
+.empty-icon{font-size:42px;margin-bottom:12px;}
+.empty-state p{font-size:13px;line-height:1.9;}
+
+/* ── FORM ── */
+.form-card{background:white;border:1px solid var(--border);border-radius:8px;padding:20px;box-shadow:var(--shadow);}
+.form-title{font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:16px;color:var(--ink);}
+.form-group{margin-bottom:13px;}
+label{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-bottom:4px;letter-spacing:.05em;}
+input[type=text],textarea,select{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:14px;color:var(--ink);background:var(--paper);transition:border-color .2s;outline:none;-webkit-appearance:none;}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--gold);background:white;box-shadow:0 0 0 3px rgba(184,134,11,0.1);}
+textarea{resize:vertical;min-height:72px;line-height:1.7;}
+.btn-submit{width:100%;padding:11px;background:var(--ink);color:var(--paper);border:none;border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;margin-top:5px;}
+.btn-submit:hover{background:var(--red);}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;}
+.quick-cats{margin-top:16px;padding:13px;background:var(--gold-light);border-radius:8px;border:1px solid var(--border);}
+.quick-cats-title{font-size:11px;color:var(--muted);margin-bottom:7px;font-weight:500;}
+.cat-chips{display:flex;gap:5px;flex-wrap:wrap;}
+
+/* ── CSV ── */
+.csv-area{width:100%;height:110px;font-family:monospace;font-size:12px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--paper);resize:vertical;outline:none;}
+.csv-area:focus{border-color:var(--gold);background:white;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+.btn-outline{flex:1;min-width:90px;padding:9px;border:1px solid var(--border);border-radius:6px;background:white;font-family:'Noto Sans JP',sans-serif;font-size:13px;color:var(--ink);cursor:pointer;transition:all .2s;}
+.btn-outline:hover{background:var(--ink);color:var(--paper);}
+
+/* ── QUIZ ── */
+.quiz-setup{background:white;border:1px solid var(--border);border-radius:8px;padding:20px;box-shadow:var(--shadow);}
+.quiz-title-h{font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:16px;}
+.quiz-option-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.quiz-opt-card{border:1px solid var(--border);border-radius:6px;padding:9px 11px;cursor:pointer;transition:all .15s;background:white;}
+.quiz-opt-card:hover,.quiz-opt-card.selected{border-color:var(--gold);background:var(--gold-light);}
+.quiz-opt-label{font-size:10px;color:var(--muted);margin-bottom:2px;}
+.quiz-opt-val{font-size:13px;font-weight:500;}
+.quiz-screen{display:none;}
+.quiz-progress{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.progress-bar{flex:1;height:5px;background:var(--paper-dark);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--gold);border-radius:3px;transition:width .4s;}
+.progress-text{font-size:11px;color:var(--muted);white-space:nowrap;}
+.quiz-score-live{font-size:12px;display:flex;gap:12px;}
+.score-g{color:var(--green);font-weight:600;}
+.score-w{color:var(--red);font-weight:600;}
+.quiz-card-big{background:white;border:1px solid var(--border);border-radius:10px;padding:26px 20px;text-align:center;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:var(--shadow);margin:12px 0;cursor:pointer;transition:all .2s;position:relative;}
+.quiz-card-big:hover{box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+.quiz-q-badge{position:absolute;top:10px;left:10px;font-size:9px;background:var(--paper-dark);color:var(--muted);padding:2px 6px;border-radius:3px;}
+.quiz-term{font-family:'Shippori Mincho',serif;font-size:clamp(20px,5vw,28px);font-weight:700;margin-bottom:5px;}
+.quiz-reading{font-size:12px;color:var(--muted);margin-bottom:10px;}
+.quiz-hint{font-size:12px;color:var(--muted);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:.6;}50%{opacity:1;}}
+.quiz-meaning-reveal{font-size:13px;line-height:1.9;color:var(--ink);background:var(--gold-light);border-radius:6px;padding:13px;text-align:left;width:100%;border:1px solid var(--border);}
+.quiz-btn-row{display:flex;gap:8px;margin-bottom:10px;}
+.btn-correct{flex:1;padding:12px;background:var(--green);color:white;border:none;border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:14px;cursor:pointer;transition:all .2s;font-weight:500;}
+.btn-correct:hover{filter:brightness(1.1);}
+.btn-wrong{flex:1;padding:12px;background:var(--red);color:white;border:none;border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:14px;cursor:pointer;transition:all .2s;font-weight:500;}
+.btn-wrong:hover{filter:brightness(1.1);}
+.btn-skip{padding:12px 14px;background:var(--paper-dark);border:1px solid var(--border);border-radius:6px;font-family:'Noto Sans JP',sans-serif;font-size:12px;color:var(--muted);cursor:pointer;}
+.quiz-result{background:white;border:1px solid var(--border);border-radius:10px;padding:26px;text-align:center;box-shadow:var(--shadow);}
+.result-score-big{font-family:'Shippori Mincho',serif;font-size:52px;font-weight:700;color:var(--ink);line-height:1;}
+.result-label{font-size:13px;color:var(--muted);margin-top:5px;margin-bottom:18px;}
+.result-detail{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
+.result-box{padding:10px;border-radius:6px;text-align:center;}
+.result-box.g{background:var(--green-light);}
+.result-box.w{background:var(--red-light);}
+.result-box .val{font-size:22px;font-weight:700;}
+.result-box.g .val{color:var(--green);}
+.result-box.w .val{color:var(--red);}
+.result-box .lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+.result-wrong-list{text-align:left;margin-top:14px;}
+.result-wrong-item{padding:7px 9px;border-left:3px solid var(--red);margin-bottom:5px;font-size:12px;background:var(--red-light);border-radius:0 4px 4px 0;}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px;}
+.stat-box{background:white;border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;}
+.stat-val{font-family:'Shippori Mincho',serif;font-size:26px;font-weight:700;color:var(--ink);}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:3px;}
+.stat-box.highlight{background:var(--ink);color:var(--paper);}
+.stat-box.highlight .stat-val{color:var(--paper);}
+.stat-box.highlight .stat-lbl{color:rgba(245,240,232,.55);}
+.cat-stats{background:white;border:1px solid var(--border);border-radius:8px;padding:14px;}
+.cat-stat-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--paper-dark);}
+.cat-stat-row:last-child{border-bottom:none;}
+.cat-stat-name{flex:1;font-size:12px;font-weight:500;}
+.cat-bar-wrap{flex:2;height:7px;background:var(--paper-dark);border-radius:4px;overflow:hidden;}
+.cat-bar-fill{height:100%;background:var(--gold);border-radius:4px;transition:width .6s;}
+.cat-bar-fill.good{background:var(--green);}
+.cat-stat-pct{font-size:11px;color:var(--muted);width:32px;text-align:right;}
+.btn-danger{padding:8px 14px;background:white;border:1px solid var(--red);border-radius:6px;color:var(--red);font-family:'Noto Sans JP',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;}
+.btn-danger:hover{background:var(--red);color:white;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,18,8,.55);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0;}
+.modal-overlay.hidden{display:none;}
+.modal{background:white;border-radius:16px 16px 0 0;padding:22px 20px 36px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;}
+@media(min-width:600px){.modal-overlay{align-items:center;padding:20px;}.modal{border-radius:12px;padding:22px 22px 24px;}}
+.modal-title{font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--paper);padding:9px 18px;border-radius:24px;font-size:13px;z-index:1000;transition:transform .3s;white-space:nowrap;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.2);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── OFFLINE BANNER ── */
+.offline-banner{display:none;background:#856404;color:#fff3cd;text-align:center;font-size:12px;padding:6px;position:sticky;top:0;z-index:150;}
+.offline-banner.show{display:block;}
+
+@media(max-width:480px){.page{padding:12px;padding-bottom:28px;}.form-card{padding:16px;}.quiz-option-row{grid-template-columns:1fr;}.btn-row{flex-direction:column;}.result-detail{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+
+<!-- オフラインバナー -->
+<div class="offline-banner" id="offlineBanner">📵 オフライン中 — データは接続後に同期されます</div>
+
+<!-- 認証画面 -->
+<div id="authScreen">
+  <div class="auth-logo">
+    <span class="big">行政書士 単語帳</span>
+    <span class="sub">GYOSEI SHOSHI FLASHCARD</span>
+  </div>
+  <button class="btn-google" onclick="signInWithGoogle()">
+    <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    Googleでログイン
+  </button>
+  <p class="auth-note">Googleアカウントでログインすると<br>どのデバイスからでも同じデータにアクセスできます</p>
+</div>
+
+<!-- ローディング -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">読み込み中...</div>
+</div>
+
+<!-- メインアプリ -->
+<div id="app" style="display:none;">
+  <div class="header">
+    <div class="header-title">行政書士 単語帳</div>
+    <div class="header-right">
+      <div class="header-stats" id="headerStats">単語: 0件</div>
+      <button class="btn-signout" onclick="signOut()">ログアウト</button>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showPage('list')"><span class="nav-icon">📚</span>一覧</button>
+    <button class="nav-btn" onclick="showPage('bookmark')"><span class="nav-icon">🔖</span>ブックマーク</button>
+    <button class="nav-btn" onclick="showPage('quiz')"><span class="nav-icon">🎯</span>クイズ</button>
+    <button class="nav-btn" onclick="showPage('add')"><span class="nav-icon">＋</span>追加</button>
+    <button class="nav-btn" onclick="showPage('csv')"><span class="nav-icon">📄</span>CSV</button>
+    <button class="nav-btn" onclick="showPage('stats')"><span class="nav-icon">📊</span>成績</button>
+  </nav>
+
+  <!-- 一覧 -->
+  <div class="page active" id="page-list">
+    <div class="filter-bar" id="filterBar"></div>
+    <div class="section-header">
+      <span>単語カード</span>
+      <span class="card-count" id="listCount">0件</span>
+    </div>
+    <div class="card-grid" id="cardGrid"></div>
+  </div>
+
+  <!-- ブックマーク -->
+  <div class="page" id="page-bookmark">
+    <div class="section-header">
+      <span>🔖 要復習リスト</span>
+      <span class="card-count" id="bookmarkCount">0件</span>
+    </div>
+    <div class="card-grid" id="bookmarkGrid"></div>
+  </div>
+
+  <!-- クイズ -->
+  <div class="page" id="page-quiz">
+    <div class="quiz-setup" id="quizSetup">
+      <div class="quiz-title-h">🎯 クイズ設定</div>
+      <div class="form-group">
+        <label>出題カテゴリ</label>
+        <select id="quizCategory"></select>
+      </div>
+      <div class="form-group">
+        <label>出題範囲</label>
+        <div class="quiz-option-row">
+          <div class="quiz-opt-card selected" onclick="selectOpt(this,'range','all')" data-range="all"><div class="quiz-opt-label">範囲</div><div class="quiz-opt-val">全単語</div></div>
+          <div class="quiz-opt-card" onclick="selectOpt(this,'range','bookmark')" data-range="bookmark"><div class="quiz-opt-label">範囲</div><div class="quiz-opt-val">🔖 ブックマーク</div></div>
+          <div class="quiz-opt-card" onclick="selectOpt(this,'range','wrong')" data-range="wrong"><div class="quiz-opt-label">範囲</div><div class="quiz-opt-val">❌ 不正解のみ</div></div>
+          <div class="quiz-opt-card" onclick="selectOpt(this,'range','random')" data-range="random"><div class="quiz-opt-label">範囲</div><div class="quiz-opt-val">🔀 ランダム20問</div></div>
+        </div>
+      </div>
+      <button class="btn-submit" onclick="startQuiz()">クイズを開始する →</button>
+    </div>
+    <div class="quiz-screen" id="quizScreen">
+      <div class="quiz-progress">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div class="progress-text" id="progressText">0/0</div>
+      </div>
+      <div class="quiz-score-live">
+        <span class="score-g">✓ <span id="liveCorrect">0</span></span>
+        <span class="score-w">✗ <span id="liveWrong">0</span></span>
+      </div>
+      <div class="quiz-card-big" id="quizCardBig" onclick="revealAnswer()">
+        <div class="quiz-q-badge" id="quizCatBadge">-</div>
+        <div class="quiz-term" id="quizTerm">-</div>
+        <div class="quiz-reading" id="quizReading"></div>
+        <div class="quiz-hint" id="quizHint">タップして意味を確認</div>
+        <div class="quiz-meaning-reveal" id="quizMeaning" style="display:none;"></div>
+      </div>
+      <div class="quiz-btn-row" id="quizBtnRow" style="display:none;">
+        <button class="btn-correct" onclick="answer(true)">✓ 正解</button>
+        <button class="btn-wrong" onclick="answer(false)">✗ 不正解</button>
+        <button class="btn-skip" onclick="answer(null)">スキップ</button>
+      </div>
+      <button class="btn-outline" onclick="endQuiz()">終了する</button>
+    </div>
+    <div class="quiz-screen" id="quizResult">
+      <div class="quiz-result">
+        <div class="result-score-big" id="resultScoreBig">-</div>
+        <div class="result-label" id="resultLabel">-</div>
+        <div class="result-detail">
+          <div class="result-box g"><div class="val" id="resultCorrect">0</div><div class="lbl">正解</div></div>
+          <div class="result-box w"><div class="val" id="resultWrong">0</div><div class="lbl">不正解</div></div>
+        </div>
+        <div class="result-wrong-list" id="resultWrongList"></div>
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+          <button class="btn-submit" onclick="restartQuiz()" style="flex:1;">もう一度</button>
+          <button class="btn-outline" onclick="backToSetup()" style="flex:1;">設定に戻る</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 追加 -->
+  <div class="page" id="page-add">
+    <div class="form-card">
+      <div class="form-title">📝 新しい単語を追加</div>
+      <div class="form-group"><label>単語・用語 *</label><input type="text" id="inputTerm" placeholder="例：行政裁量"></div>
+      <div class="form-group"><label>よみがな（任意）</label><input type="text" id="inputReading" placeholder="例：ぎょうせいさいりょう"></div>
+      <div class="form-group"><label>意味・解説 *</label><textarea id="inputMeaning" placeholder="例：行政機関が法律の範囲内で複数の選択肢から最善を選べる権限。"></textarea></div>
+      <div class="form-group"><label>カテゴリ（任意）</label><input type="text" id="inputCategory" placeholder="例：行政法"></div>
+      <button class="btn-submit" id="btnAdd" onclick="addCard()">追加する</button>
+    </div>
+    <div class="quick-cats" style="margin-top:14px;">
+      <div class="quick-cats-title">💡 よく出る分野</div>
+      <div class="cat-chips">
+        <button class="chip" onclick="setCategory('行政法')">行政法</button>
+        <button class="chip" onclick="setCategory('民法')">民法</button>
+        <button class="chip" onclick="setCategory('憲法')">憲法</button>
+        <button class="chip" onclick="setCategory('商法')">商法</button>
+        <button class="chip" onclick="setCategory('基礎法学')">基礎法学</button>
+        <button class="chip" onclick="setCategory('地方自治法')">地方自治法</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV -->
+  <div class="page" id="page-csv">
+    <div class="form-card">
+      <div class="form-title">📄 CSV インポート</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.8;">1行1単語。形式：<code style="background:var(--paper-dark);padding:1px 4px;border-radius:3px;font-size:11px;">単語,よみがな,意味,カテゴリ</code></p>
+      <textarea class="csv-area" id="csvInput" placeholder="行政裁量,ぎょうせいさいりょう,行政機関が法律の範囲内で最善を選べる権限,行政法
+信義誠実の原則,しんぎせいじつのげんそく,権利行使は誠実に行うべきという原則（民法1条2項）,民法"></textarea>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn-outline" onclick="importCSV()">⬆ インポート</button>
+        <button class="btn-outline" onclick="exportCSV()">⬇ テキスト出力</button>
+        <button class="btn-outline" onclick="downloadCSV()">📥 ダウンロード</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成績 -->
+  <div class="page" id="page-stats">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="section-header"><span>カテゴリ別 正答率</span></div>
+    <div class="cat-stats" id="catStats"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-danger" onclick="resetRecords()">記録をリセット</button>
+      <button class="btn-danger" onclick="resetAll()">全データをリセット</button>
+    </div>
+  </div>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal">
+    <div class="modal-title">✏️ 編集<button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="form-group"><label>単語・用語 *</label><input type="text" id="modalTerm"></div>
+    <div class="form-group"><label>よみがな</label><input type="text" id="modalReading"></div>
+    <div class="form-group"><label>意味・解説 *</label><textarea id="modalMeaning" style="min-height:90px;"></textarea></div>
+    <div class="form-group"><label>カテゴリ</label><input type="text" id="modalCategory"></div>
+    <button class="btn-submit" onclick="saveModal()">保存</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, updateDoc, onSnapshot, writeBatch, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA3odJwAV-83ez7vlC7oNOyCxpcMqax2cg",
+  authDomain: "flashcard-app-ba54f.firebaseapp.com",
+  databaseURL: "https://flashcard-app-ba54f-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "flashcard-app-ba54f",
+  storageBucket: "flashcard-app-ba54f.firebasestorage.app",
+  messagingSenderId: "90548209458",
+  appId: "1:90548209458:web:87d4261a117396a4d5b92b",
+  measurementId: "G-9JWMY0V9LP"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+let cards = [];
+let records = {};
+let unsubCards = null;
+let unsubRecords = null;
+
+// ── ユーザーコレクション参照 ──
+const cardsRef = () => collection(db, 'users', currentUser.uid, 'cards');
+const recordsRef = () => collection(db, 'users', currentUser.uid, 'records');
+
+// ── 認証 ──
+window.signInWithGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    showToast('ログインに失敗しました: ' + e.message);
+  }
+};
+
+window.signOut = async () => {
+  if (!confirm('ログアウトしますか？')) return;
+  if (unsubCards) unsubCards();
+  if (unsubRecords) unsubRecords();
+  await fbSignOut(auth);
+};
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('loadingScreen').style.display = 'flex';
+    await loadData();
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderList();
+    updateStats();
+  } else {
+    currentUser = null;
+    cards = [];
+    records = {};
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('authScreen').classList.remove('hidden');
+  }
+});
+
+// ── データ読み込み（リアルタイム同期） ──
+async function loadData() {
+  // 初回全件取得
+  const [cSnap, rSnap] = await Promise.all([
+    getDocs(query(cardsRef(), orderBy('createdAt', 'desc'))),
+    getDocs(recordsRef())
+  ]);
+  cards = cSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  records = {};
+  rSnap.docs.forEach(d => { records[d.id] = d.data(); });
+
+  // リアルタイム更新
+  if (unsubCards) unsubCards();
+  unsubCards = onSnapshot(query(cardsRef(), orderBy('createdAt', 'desc')), snap => {
+    cards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderList();
+    renderBookmarks();
+    updateStats();
+  });
+  if (unsubRecords) unsubRecords();
+  unsubRecords = onSnapshot(recordsRef(), snap => {
+    records = {};
+    snap.docs.forEach(d => { records[d.id] = d.data(); });
+  });
+}
+
+// ── CRUD ──
+async function saveCardToDb(card) {
+  await setDoc(doc(db, 'users', currentUser.uid, 'cards', card.id), card);
+}
+
+async function updateCardInDb(id, data) {
+  await updateDoc(doc(db, 'users', currentUser.uid, 'cards', id), data);
+}
+
+async function deleteCardFromDb(id) {
+  await deleteDoc(doc(db, 'users', currentUser.uid, 'cards', id));
+}
+
+async function saveRecordToDb(id, data) {
+  await setDoc(doc(db, 'users', currentUser.uid, 'records', id), data);
+}
+
+// ── 単語追加 ──
+window.addCard = async () => {
+  const term = document.getElementById('inputTerm').value.trim();
+  const meaning = document.getElementById('inputMeaning').value.trim();
+  if (!term || !meaning) { showToast('単語と意味は必須です'); return; }
+  const btn = document.getElementById('btnAdd');
+  btn.disabled = true;
+  try {
+    const id = Date.now().toString();
+    const card = { id, term, reading: document.getElementById('inputReading').value.trim(), meaning, category: document.getElementById('inputCategory').value.trim(), bookmarked: false, createdAt: Date.now() };
+    await saveCardToDb(card);
+    ['inputTerm','inputReading','inputMeaning','inputCategory'].forEach(i => document.getElementById(i).value = '');
+    showToast('✓ 単語を追加しました！');
+  } catch(e) { showToast('保存失敗: ' + e.message); }
+  btn.disabled = false;
+};
+
+window.deleteCard = async (id, e) => {
+  e.stopPropagation();
+  if (!confirm('この単語を削除しますか？')) return;
+  try {
+    await deleteCardFromDb(id);
+    showToast('削除しました');
+  } catch(e) { showToast('削除失敗: ' + e.message); }
+};
+
+window.toggleBookmark = async (id, e) => {
+  e.stopPropagation();
+  const c = cards.find(c => c.id === id);
+  if (!c) return;
+  try {
+    await updateCardInDb(id, { bookmarked: !c.bookmarked });
+    showToast(c.bookmarked ? '☆ ブックマーク解除' : '★ ブックマーク追加');
+  } catch(e) { showToast('更新失敗'); }
+};
+
+// ── 編集モーダル ──
+let editingId = null;
+window.openEdit = (id) => {
+  const c = cards.find(c => c.id === id);
+  if (!c) return;
+  editingId = id;
+  document.getElementById('modalTerm').value = c.term;
+  document.getElementById('modalReading').value = c.reading || '';
+  document.getElementById('modalMeaning').value = c.meaning;
+  document.getElementById('modalCategory').value = c.category || '';
+  document.getElementById('editModal').classList.remove('hidden');
+};
+window.closeModal = () => document.getElementById('editModal').classList.add('hidden');
+window.saveModal = async () => {
+  const term = document.getElementById('modalTerm').value.trim();
+  const meaning = document.getElementById('modalMeaning').value.trim();
+  if (!term || !meaning) { showToast('単語と意味は必須です'); return; }
+  try {
+    await updateCardInDb(editingId, { term, reading: document.getElementById('modalReading').value.trim(), meaning, category: document.getElementById('modalCategory').value.trim() });
+    closeModal();
+    showToast('✓ 更新しました');
+  } catch(e) { showToast('更新失敗: ' + e.message); }
+};
+
+// ── CSV ──
+window.importCSV = async () => {
+  const raw = document.getElementById('csvInput').value.trim();
+  if (!raw) { showToast('テキストを入力してください'); return; }
+  const lines = raw.split('\n').filter(l => l.trim());
+  let added = 0;
+  const batch = writeBatch(db);
+  lines.forEach(line => {
+    const parts = line.split(',').map(s => s.trim().replace(/^"|"$/g,''));
+    if (!parts[0] || !parts[2]) return;
+    const id = (Date.now() + added).toString();
+    const ref = doc(db, 'users', currentUser.uid, 'cards', id);
+    batch.set(ref, { id, term: parts[0], reading: parts[1]||'', meaning: parts[2]||'', category: parts[3]||'', bookmarked: false, createdAt: Date.now() + added });
+    added++;
+  });
+  try {
+    await batch.commit();
+    document.getElementById('csvInput').value = '';
+    showToast(`✓ ${added}件インポートしました`);
+  } catch(e) { showToast('インポート失敗: ' + e.message); }
+};
+
+window.exportCSV = () => {
+  const csv = cards.map(c => [c.term, c.reading, c.meaning, c.category].join(',')).join('\n');
+  document.getElementById('csvInput').value = csv;
+  showToast('テキストに出力しました（コピーして使用）');
+};
+
+window.downloadCSV = () => {
+  const header = '単語,よみがな,意味,カテゴリ\n';
+  const csv = header + cards.map(c => [c.term, c.reading, c.meaning, c.category].map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'gyosei_tango.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ ダウンロードしました');
+};
+
+// ── 成績リセット ──
+window.resetRecords = async () => {
+  if (!confirm('全記録をリセットしますか？')) return;
+  const batch = writeBatch(db);
+  Object.keys(records).forEach(id => batch.delete(doc(db, 'users', currentUser.uid, 'records', id)));
+  await batch.commit();
+  records = {};
+  renderStats();
+  showToast('記録をリセットしました');
+};
+
+window.resetAll = async () => {
+  if (!confirm('全データ（単語・記録）を削除しますか？この操作は元に戻せません。')) return;
+  const batch = writeBatch(db);
+  cards.forEach(c => batch.delete(doc(db, 'users', currentUser.uid, 'cards', c.id)));
+  Object.keys(records).forEach(id => batch.delete(doc(db, 'users', currentUser.uid, 'records', id)));
+  await batch.commit();
+  showToast('全データを削除しました');
+};
+
+// ── クイズ記録保存 ──
+window._saveRecord = async (id, correct, wrong) => {
+  const data = { correct, wrong };
+  records[id] = data;
+  try { await saveRecordToDb(id, data); } catch(e) {}
+};
+
+// ── グローバル公開 ──
+window._getCards = () => cards;
+window._getRecords = () => records;
+window._db = db;
+window._currentUser = () => currentUser;
+
+// ── オフライン検知 ──
+window.addEventListener('online',  () => document.getElementById('offlineBanner').classList.remove('show'));
+window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
+</script>
+
+<script>
+// ── UI ──
+let currentFilter = 'all';
+let quizQueue = [], quizIdx = 0, quizCorrect = 0, quizWrong = 0, quizWrongCards = [];
+let quizRange = 'all', quizCatFilter = 'all';
+let revealed = false;
+
+function getCards() { return window._getCards ? window._getCards() : []; }
+function getRecords() { return window._getRecords ? window._getRecords() : {}; }
+function getRecord(id) { return (getRecords()[id]) || { correct: 0, wrong: 0 }; }
+
+// ── ナビ ──
+window.showPage = (id) => {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const map = { list:0, bookmark:1, quiz:2, add:3, csv:4, stats:5 };
+  document.querySelectorAll('.nav-btn')[map[id]].classList.add('active');
+  if (id === 'list') renderList();
+  if (id === 'bookmark') renderBookmarks();
+  if (id === 'quiz') initQuizSetup();
+  if (id === 'stats') renderStats();
+};
+
+// ── カード描画 ──
+function renderCard(c) {
+  const r = getRecord(c.id);
+  const total = r.correct + r.wrong;
+  const recordHtml = total > 0 ? `<span class="record-badge ${Math.round(r.correct/total*100)>=70?'g':'w'}">${Math.round(r.correct/total*100)}%(${r.correct}/${total})</span>` : '';
+  return `<div class="flashcard ${c.bookmarked?'bookmarked':''}" id="card-${c.id}">
+    <div class="card-front">
+      <div class="card-term-wrap">
+        ${c.category?`<span class="category-badge">${c.category}</span>`:''}${recordHtml}
+        <br><span class="card-term">${c.term}</span>${c.reading?`<span class="card-reading">${c.reading}</span>`:''}
+      </div>
+      <div class="card-actions">
+        <button class="btn-icon" onclick="toggleBookmark('${c.id}',event)">${c.bookmarked?'★':'☆'}</button>
+        <button class="btn-small" onclick="openEdit('${c.id}')">編集</button>
+        <button class="btn-small" onclick="toggleCard('${c.id}')">意味</button>
+        <button class="btn-icon" onclick="deleteCard('${c.id}',event)" style="font-size:13px;opacity:.4;">✕</button>
+      </div>
+    </div>
+    <div class="card-back" id="back-${c.id}">
+      <div class="card-meaning">${c.meaning}</div>
+    </div>
+  </div>`;
+}
+
+window.renderList = () => {
+  const cards = getCards();
+  const cats = [...new Set(cards.map(c=>c.category).filter(Boolean))];
+  const bar = document.getElementById('filterBar');
+  if (!bar) return;
+  bar.innerHTML = `<button class="chip ${currentFilter==='all'?'active':''}" onclick="setFilter('all',this)">すべて</button>`;
+  cats.forEach(cat => bar.innerHTML += `<button class="chip ${currentFilter===cat?'active':''}" onclick="setFilter('${cat}',this)">${cat}</button>`);
+  const filtered = currentFilter==='all' ? cards : cards.filter(c=>c.category===currentFilter);
+  document.getElementById('listCount').textContent = filtered.length+'件';
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = filtered.length ? filtered.map(renderCard).join('') : `<div class="empty-state"><div class="empty-icon">📖</div><p>まだ単語がありません。<br>「追加」タブから登録しましょう。</p></div>`;
+};
+
+window.renderBookmarks = () => {
+  const bm = getCards().filter(c=>c.bookmarked);
+  document.getElementById('bookmarkCount').textContent = bm.length+'件';
+  document.getElementById('bookmarkGrid').innerHTML = bm.length ? bm.map(renderCard).join('') : `<div class="empty-state"><div class="empty-icon">🔖</div><p>ブックマークされた単語はありません。<br>覚えにくい単語は★でマークしましょう。</p></div>`;
+};
+
+window.setFilter = (f, el) => {
+  currentFilter = f;
+  document.querySelectorAll('#filterBar .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+};
+
+window.toggleCard = (id) => {
+  document.getElementById('back-'+id).classList.toggle('open');
+};
+
+// ── クイズ ──
+window.initQuizSetup = () => {
+  const cards = getCards();
+  const cats = [...new Set(cards.map(c=>c.category).filter(Boolean))];
+  document.getElementById('quizCategory').innerHTML = '<option value="all">すべて</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  document.getElementById('quizSetup').style.display = 'block';
+  document.getElementById('quizScreen').style.display = 'none';
+  document.getElementById('quizResult').style.display = 'none';
+};
+
+window.selectOpt = (el, group, val) => {
+  document.querySelectorAll(`[data-${group}]`).forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+  if (group==='range') quizRange = val;
+};
+
+window.startQuiz = () => {
+  quizCatFilter = document.getElementById('quizCategory').value;
+  let pool = getCards().filter(c => quizCatFilter==='all' || c.category===quizCatFilter);
+  if (quizRange==='bookmark') pool = pool.filter(c=>c.bookmarked);
+  if (quizRange==='wrong') pool = pool.filter(c=>{ const r=getRecord(c.id); return r.wrong>0; });
+  if (quizRange==='random') pool = shuffle([...pool]).slice(0,20);
+  else pool = shuffle([...pool]);
+  if (pool.length===0) { showToast('該当する単語がありません'); return; }
+  quizQueue = pool; quizIdx = 0; quizCorrect = 0; quizWrong = 0; quizWrongCards = [];
+  document.getElementById('quizSetup').style.display = 'none';
+  document.getElementById('quizScreen').style.display = 'block';
+  document.getElementById('quizResult').style.display = 'none';
+  showQuizCard();
+};
+
+function showQuizCard() {
+  revealed = false;
+  if (quizIdx >= quizQueue.length) { showResult(); return; }
+  const c = quizQueue[quizIdx];
+  document.getElementById('progressFill').style.width = (quizIdx/quizQueue.length*100)+'%';
+  document.getElementById('progressText').textContent = (quizIdx+1)+'/'+quizQueue.length;
+  document.getElementById('liveCorrect').textContent = quizCorrect;
+  document.getElementById('liveWrong').textContent = quizWrong;
+  document.getElementById('quizCatBadge').textContent = c.category||'—';
+  document.getElementById('quizTerm').textContent = c.term;
+  document.getElementById('quizReading').textContent = c.reading||'';
+  document.getElementById('quizMeaning').style.display = 'none';
+  document.getElementById('quizMeaning').textContent = c.meaning;
+  document.getElementById('quizHint').style.display = 'block';
+  document.getElementById('quizBtnRow').style.display = 'none';
+  document.getElementById('quizCardBig').style.cursor = 'pointer';
+}
+
+window.revealAnswer = () => {
+  if (revealed) return;
+  revealed = true;
+  document.getElementById('quizMeaning').style.display = 'block';
+  document.getElementById('quizHint').style.display = 'none';
+  document.getElementById('quizBtnRow').style.display = 'flex';
+  document.getElementById('quizCardBig').style.cursor = 'default';
+};
+
+window.answer = (correct) => {
+  const c = quizQueue[quizIdx];
+  const r = getRecord(c.id);
+  const newCorrect = r.correct + (correct===true?1:0);
+  const newWrong = r.wrong + (correct===false?1:0);
+  if (correct===true) quizCorrect++;
+  else if (correct===false) { quizWrong++; quizWrongCards.push(c); }
+  if (window._saveRecord) window._saveRecord(c.id, newCorrect, newWrong);
+  quizIdx++;
+  showQuizCard();
+};
+
+function showResult() {
+  document.getElementById('quizScreen').style.display = 'none';
+  document.getElementById('quizResult').style.display = 'block';
+  const total = quizCorrect + quizWrong;
+  const pct = total > 0 ? Math.round(quizCorrect/total*100) : 0;
+  document.getElementById('resultScoreBig').textContent = pct+'%';
+  document.getElementById('resultLabel').textContent = `${total}問中 ${quizCorrect}問正解`;
+  document.getElementById('resultCorrect').textContent = quizCorrect;
+  document.getElementById('resultWrong').textContent = quizWrong;
+  const wl = document.getElementById('resultWrongList');
+  wl.innerHTML = quizWrongCards.length > 0
+    ? '<div style="font-size:11px;color:var(--muted);margin-bottom:7px;">❌ 不正解だった単語</div>' + quizWrongCards.map(c=>`<div class="result-wrong-item"><strong>${c.term}</strong> — ${c.meaning.slice(0,60)}${c.meaning.length>60?'…':''}</div>`).join('')
+    : '<div style="font-size:13px;color:var(--green);text-align:center;margin-top:8px;">🎉 全問正解！素晴らしい！</div>';
+}
+
+window.endQuiz = () => { if(confirm('クイズを終了しますか？'))backToSetup(); };
+window.backToSetup = () => { initQuizSetup(); };
+window.restartQuiz = () => { startQuiz(); };
+
+// ── 成績 ──
+window.renderStats = () => {
+  const cards = getCards();
+  const records = getRecords();
+  const bm = cards.filter(c=>c.bookmarked).length;
+  let tc=0, tw=0, studied=0;
+  cards.forEach(c=>{ const r=getRecord(c.id); tc+=r.correct; tw+=r.wrong; if(r.correct+r.wrong>0)studied++; });
+  const pct = (tc+tw)>0 ? Math.round(tc/(tc+tw)*100) : 0;
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-box highlight"><div class="stat-val">${cards.length}</div><div class="stat-lbl">総単語数</div></div>
+    <div class="stat-box"><div class="stat-val">${bm}</div><div class="stat-lbl">🔖 ブックマーク</div></div>
+    <div class="stat-box"><div class="stat-val">${studied}</div><div class="stat-lbl">学習済み</div></div>
+    <div class="stat-box"><div class="stat-val">${pct}%</div><div class="stat-lbl">総合正答率</div></div>
+    <div class="stat-box"><div class="stat-val">${tc}</div><div class="stat-lbl">累計正解</div></div>
+    <div class="stat-box"><div class="stat-val">${tw}</div><div class="stat-lbl">累計不正解</div></div>`;
+  const cats = [...new Set(cards.map(c=>c.category).filter(Boolean))];
+  const el = document.getElementById('catStats');
+  el.innerHTML = cats.length ? cats.map(cat=>{
+    const cc = cards.filter(c=>c.category===cat);
+    let sc=0,sw=0; cc.forEach(c=>{ const r=getRecord(c.id); sc+=r.correct; sw+=r.wrong; });
+    const p = (sc+sw)>0 ? Math.round(sc/(sc+sw)*100) : 0;
+    return `<div class="cat-stat-row"><div class="cat-stat-name">${cat} <span style="font-size:10px;color:var(--muted);">(${cc.length}件)</span></div><div class="cat-bar-wrap"><div class="cat-bar-fill ${p>=70?'good':''}" style="width:${p}%"></div></div><div class="cat-stat-pct">${(sc+sw)>0?p+'%':'—'}</div></div>`;
+  }).join('') : '<div style="font-size:12px;color:var(--muted);padding:12px;text-align:center;">カテゴリが設定された単語がありません</div>';
+};
+
+// ── ユーティリティ ──
+window.updateStats = () => {
+  const cards = getCards();
+  const bm = cards.filter(c=>c.bookmarked).length;
+  const el = document.getElementById('headerStats');
+  if (el) el.innerHTML = `単語: ${cards.length}件 / BM: ${bm}件`;
+};
+
+window.setCategory = (cat) => { document.getElementById('inputCategory').value=cat; document.getElementById('inputTerm').focus(); };
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+window.showToast = showToast;
+
+function shuffle(a) { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a; }
+</script>
+
+<!-- Service Worker 登録 -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered'))
+      .catch(e => console.log('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>
