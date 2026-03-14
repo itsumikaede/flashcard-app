@@ -10,7 +10,7 @@
 <meta name="description" content="試験対策 単語帳アプリ">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>単語帳</title>
+<title> 単語帳</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@300;400;500&family=Shippori+Mincho:wght@400;700&display=swap" rel="stylesheet">
@@ -335,16 +335,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.7;}
       <div class="form-group"><label>よみがな（任意）</label><input type="text" id="inputReading" placeholder="例：ぎょうせいさいりょう"></div>
       <div class="form-group"><label>意味・解説 *</label><textarea id="inputMeaning" placeholder="例：行政機関が法律の範囲内で複数の選択肢から最善を選べる権限。"></textarea></div>
       <div class="form-group"><label>カテゴリ（任意）</label><input type="text" id="inputCategory" placeholder="例：行政法"></div>
-      <button class="btn-submit" id="btnAdd" onclick="
-        var t=document.getElementById('inputTerm').value.trim();
-        var m=document.getElementById('inputMeaning').value.trim();
-        if(!t||!m){alert('単語と意味を入力してください');return;}
-        addCard();
-        document.getElementById('inputTerm').value='';
-        document.getElementById('inputReading').value='';
-        document.getElementById('inputMeaning').value='';
-        document.getElementById('inputTerm').focus();
-      ">追加する</button>
+      <button class="btn-submit" id="btnAdd" onclick="addCard()">追加する</button>
     </div>
     <div class="quick-cats" style="margin-top:14px;">
       <div class="quick-cats-title">💡 よく出る分野</div>
@@ -520,18 +511,42 @@ async function saveRecordToDb(id, data) {
 
 // ── 単語追加 ──
 window.addCard = async () => {
-  const term = document.getElementById('inputTerm').value.trim();
-  const meaning = document.getElementById('inputMeaning').value.trim();
-  const reading = document.getElementById('inputReading').value.trim();
+  // 1. まず全フィールドの値を変数に取得
+  const term     = document.getElementById('inputTerm').value.trim();
+  const reading  = document.getElementById('inputReading').value.trim();
+  const meaning  = document.getElementById('inputMeaning').value.trim();
   const category = document.getElementById('inputCategory').value.trim();
-  if (!term || !meaning) return;
+
+  // 2. バリデーション
+  if (!term)    { showToast('単語を入力してください'); return; }
+  if (!meaning) { showToast('意味を入力してください'); return; }
+
+  // 3. ボタンを無効化
+  const btn = document.getElementById('btnAdd');
+  btn.disabled = true;
+  btn.textContent = '保存中...';
+
   try {
+    // 4. Firestoreに保存
     const id = Date.now().toString();
-    const card = { id, term, reading, meaning, category, bookmarked: false, createdAt: Date.now() };
-    await saveCardToDb(card);
+    await saveCardToDb({ id, term, reading, meaning, category, bookmarked: false, createdAt: Date.now() });
+
+    // 5. 保存成功後にフィールドをリセット
+    document.getElementById('inputTerm').value    = '';
+    document.getElementById('inputReading').value = '';
+    document.getElementById('inputMeaning').value = '';
+    // カテゴリは保持（連続入力しやすいため）
+
+    // 6. 単語欄にフォーカスを戻す
+    document.getElementById('inputTerm').focus();
     showToast('✓「' + term + '」を追加しました！');
+
   } catch(e) {
     showToast('保存失敗: ' + e.message);
+  } finally {
+    // 7. 成功・失敗にかかわらずボタンを戻す
+    btn.disabled = false;
+    btn.textContent = '追加する';
   }
 };
 
