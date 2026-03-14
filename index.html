@@ -509,14 +509,28 @@ window.addCard = async () => {
   if (!term || !meaning) { showToast('単語と意味は必須です'); return; }
   const btn = document.getElementById('btnAdd');
   btn.disabled = true;
+  btn.textContent = '保存中...';
+  // フィールドを即座にクリアしてカテゴリを保持（連続入力しやすくする）
+  const savedCategory = document.getElementById('inputCategory').value.trim();
+  const reading = document.getElementById('inputReading').value.trim();
+  const category = savedCategory;
   try {
     const id = Date.now().toString();
-    const card = { id, term, reading: document.getElementById('inputReading').value.trim(), meaning, category: document.getElementById('inputCategory').value.trim(), bookmarked: false, createdAt: Date.now() };
+    const card = { id, term, reading, meaning, category, bookmarked: false, createdAt: Date.now() };
+    // フィールドをすぐにクリア（保存完了を待たない）
+    document.getElementById('inputTerm').value = '';
+    document.getElementById('inputReading').value = '';
+    document.getElementById('inputMeaning').value = '';
+    // カテゴリは連続入力のため保持
+    document.getElementById('inputTerm').focus();
     await saveCardToDb(card);
-    ['inputTerm','inputReading','inputMeaning','inputCategory'].forEach(i => document.getElementById(i).value = '');
-    showToast('✓ 単語を追加しました！');
-  } catch(e) { showToast('保存失敗: ' + e.message); }
-  btn.disabled = false;
+    showToast('✓「' + term + '」を追加しました！');
+  } catch(e) {
+    showToast('保存失敗: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '追加する';
+  }
 };
 
 window.deleteCard = async (id, e) => {
