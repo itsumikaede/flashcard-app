@@ -474,8 +474,15 @@ async function loadData() {
   if (unsubCards) unsubCards();
   unsubCards = onSnapshot(query(cardsRef(), orderBy('createdAt', 'desc')), snap => {
     cards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderList();
-    renderBookmarks();
+    // currentFilterが存在しないカテゴリを指していたらリセット
+    const cats = [...new Set(cards.map(c=>c.category).filter(Boolean))];
+    if (currentFilter !== 'all' && !cats.includes(currentFilter)) {
+      currentFilter = 'all';
+    }
+    // 現在表示中のページだけ再描画
+    const activePage = document.querySelector('.page.active');
+    if (activePage && activePage.id === 'page-list') renderList();
+    if (activePage && activePage.id === 'page-bookmark') renderBookmarks();
     updateStats();
   });
   if (unsubRecords) unsubRecords();
@@ -510,20 +517,17 @@ window.addCard = async () => {
   const btn = document.getElementById('btnAdd');
   btn.disabled = true;
   btn.textContent = '保存中...';
-  // フィールドを即座にクリアしてカテゴリを保持（連続入力しやすくする）
-  const savedCategory = document.getElementById('inputCategory').value.trim();
   const reading = document.getElementById('inputReading').value.trim();
-  const category = savedCategory;
+  const category = document.getElementById('inputCategory').value.trim();
   try {
     const id = Date.now().toString();
     const card = { id, term, reading, meaning, category, bookmarked: false, createdAt: Date.now() };
-    // フィールドをすぐにクリア（保存完了を待たない）
+    await saveCardToDb(card);
+    // 保存成功後にクリア（単語・よみがな・意味のみ。カテゴリは連続入力のため保持）
     document.getElementById('inputTerm').value = '';
     document.getElementById('inputReading').value = '';
     document.getElementById('inputMeaning').value = '';
-    // カテゴリは連続入力のため保持
     document.getElementById('inputTerm').focus();
-    await saveCardToDb(card);
     showToast('✓「' + term + '」を追加しました！');
   } catch(e) {
     showToast('保存失敗: ' + e.message);
