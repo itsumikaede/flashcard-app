@@ -474,16 +474,17 @@ async function loadData() {
   if (unsubCards) unsubCards();
   unsubCards = onSnapshot(query(cardsRef(), orderBy('createdAt', 'desc')), snap => {
     cards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    // currentFilterが存在しないカテゴリを指していたらリセット
     const cats = [...new Set(cards.map(c=>c.category).filter(Boolean))];
     if (currentFilter !== 'all' && !cats.includes(currentFilter)) {
       currentFilter = 'all';
     }
-    // 現在表示中のページだけ再描画
     const activePage = document.querySelector('.page.active');
     if (activePage && activePage.id === 'page-list') renderList();
     if (activePage && activePage.id === 'page-bookmark') renderBookmarks();
     updateStats();
+    // 追加ページ表示中はボタンを必ず有効状態に保つ
+    const btn = document.getElementById('btnAdd');
+    if (btn) { btn.disabled = false; btn.textContent = '追加する'; }
   });
   if (unsubRecords) unsubRecords();
   unsubRecords = onSnapshot(recordsRef(), snap => {
@@ -521,32 +522,20 @@ window.addCard = async () => {
   if (!term)    { showToast('単語を入力してください'); return; }
   if (!meaning) { showToast('意味を入力してください'); return; }
 
-  // 3. ボタンを無効化
-  const btn = document.getElementById('btnAdd');
-  btn.disabled = true;
-  btn.textContent = '保存中...';
-
   try {
-    // 4. Firestoreに保存
+    // Firestoreに保存（ボタン操作なし）
     const id = Date.now().toString();
     await saveCardToDb({ id, term, reading, meaning, category, bookmarked: false, createdAt: Date.now() });
 
-    // 5. 保存成功後にフィールドをリセット
+    // 保存成功後にフィールドをリセット
     document.getElementById('inputTerm').value    = '';
     document.getElementById('inputReading').value = '';
     document.getElementById('inputMeaning').value = '';
-    // カテゴリは保持（連続入力しやすいため）
-
-    // 6. 単語欄にフォーカスを戻す
     document.getElementById('inputTerm').focus();
     showToast('✓「' + term + '」を追加しました！');
 
   } catch(e) {
     showToast('保存失敗: ' + e.message);
-  } finally {
-    // 7. 成功・失敗にかかわらずボタンを戻す
-    btn.disabled = false;
-    btn.textContent = '追加する';
   }
 };
 
