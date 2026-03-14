@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#1a1208">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="行政書士単語帳">
-<meta name="description" content="行政書士試験対策 単語帳アプリ">
+<meta name="apple-mobile-web-app-title" content="単語帳">
+<meta name="description" content="試験対策 単語帳アプリ">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>単語帳</title>
@@ -214,7 +214,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.7;}
 <!-- 認証画面 -->
 <div id="authScreen">
   <div class="auth-logo">
-    <span class="big">単語帳</span>
+    <span class="big"> 単語帳</span>
     <span class="sub">GYOSEI SHOSHI FLASHCARD</span>
   </div>
   <button class="btn-google" onclick="signInWithGoogle()">
@@ -233,7 +233,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.7;}
 <!-- メインアプリ -->
 <div id="app" style="display:none;">
   <div class="header">
-    <div class="header-title">単語帳</div>
+    <div class="header-title"> 単語帳</div>
     <div class="header-right">
       <div class="header-stats" id="headerStats">単語: 0件</div>
       <button class="btn-signout" onclick="signOut()">ログアウト</button>
@@ -335,7 +335,16 @@ textarea{resize:vertical;min-height:72px;line-height:1.7;}
       <div class="form-group"><label>よみがな（任意）</label><input type="text" id="inputReading" placeholder="例：ぎょうせいさいりょう"></div>
       <div class="form-group"><label>意味・解説 *</label><textarea id="inputMeaning" placeholder="例：行政機関が法律の範囲内で複数の選択肢から最善を選べる権限。"></textarea></div>
       <div class="form-group"><label>カテゴリ（任意）</label><input type="text" id="inputCategory" placeholder="例：行政法"></div>
-      <button class="btn-submit" id="btnAdd" onclick="addCard()">追加する</button>
+      <button class="btn-submit" id="btnAdd" onclick="
+        var t=document.getElementById('inputTerm').value.trim();
+        var m=document.getElementById('inputMeaning').value.trim();
+        if(!t||!m){alert('単語と意味を入力してください');return;}
+        addCard();
+        document.getElementById('inputTerm').value='';
+        document.getElementById('inputReading').value='';
+        document.getElementById('inputMeaning').value='';
+        document.getElementById('inputTerm').focus();
+      ">追加する</button>
     </div>
     <div class="quick-cats" style="margin-top:14px;">
       <div class="quick-cats-title">💡 よく出る分野</div>
@@ -513,27 +522,16 @@ async function saveRecordToDb(id, data) {
 window.addCard = async () => {
   const term = document.getElementById('inputTerm').value.trim();
   const meaning = document.getElementById('inputMeaning').value.trim();
-  if (!term || !meaning) { showToast('単語と意味は必須です'); return; }
-  const btn = document.getElementById('btnAdd');
-  btn.disabled = true;
-  btn.textContent = '保存中...';
   const reading = document.getElementById('inputReading').value.trim();
   const category = document.getElementById('inputCategory').value.trim();
+  if (!term || !meaning) return;
   try {
     const id = Date.now().toString();
     const card = { id, term, reading, meaning, category, bookmarked: false, createdAt: Date.now() };
     await saveCardToDb(card);
-    // 保存成功後にクリア（単語・よみがな・意味のみ。カテゴリは連続入力のため保持）
-    document.getElementById('inputTerm').value = '';
-    document.getElementById('inputReading').value = '';
-    document.getElementById('inputMeaning').value = '';
-    document.getElementById('inputTerm').focus();
     showToast('✓「' + term + '」を追加しました！');
   } catch(e) {
     showToast('保存失敗: ' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '追加する';
   }
 };
 
